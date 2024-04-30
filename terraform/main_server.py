@@ -15,11 +15,11 @@ from cdktf_cdktf_provider_aws.data_aws_caller_identity import DataAwsCallerIdent
 import base64
 
 bucket=""
-dynamo_table=""
-your_repo=""
+dynamo_table="posts"
+your_repo="git@github.com:dherrens/postagram_ensai.git"
 
 
-user_data= base64.b64encode(f"""
+user_data = base64.b64encode(f"""
 #!/bin/bash
 echo "userdata-start"
 echo 'export BUCKET={bucket}' >> /etc/environment
@@ -27,7 +27,7 @@ echo 'export DYNAMO_TABLE={dynamo_table}' >> /etc/environment
 apt update
 apt install -y python3-pip
 git clone {your_repo}
-cd Ensai-CloudComputingLab1
+cd postagram_ensai/webservice
 pip3 install -r requirements.txt
 python3 app.py
 echo "userdata-end""".encode("ascii")).decode("ascii")
@@ -47,14 +47,13 @@ class ServerStack(TerraformStack):
         # automatiquement ce code sur une autre région. Le code
         # pour y arriver est vraiment compliqué.
         az_ids = [f"us-east-1{i}" for i in "abcdef"]
-        subnets= []
+        subnets = []
         for i,az_id in enumerate(az_ids):
             subnets.append(DefaultSubnet(
-            self, f"default_sub{i}",
-            availability_zone=az_id
-        ).id)
+                self, f"default_sub{i}",
+                availability_zone=az_id
+            ).id)
             
-
         security_group = SecurityGroup(
             self, "sg-tp",
             ingress=[
@@ -87,16 +86,49 @@ class ServerStack(TerraformStack):
             ]
             )
         
-        launch_template = LaunchTemplate()
+        launch_template = LaunchTemplate(
+            self, "launch template",
+            image_id="ami-080e1f13689e07408",
+            instance_type="t2.micro", # le type de l'instance
+            vpc_security_group_ids=[security_group.id],
+            key_name="vockey",
+            user_data=user_data,
+            tags={"Name":"template TF"}
+            )
+
+        lb = Lb(
+            self, "lb",
+            load_balancer_type="application",
+            security_groups=[security_group.id],
+            subnets=subnets
+        )
+
+        target_group = LbTargetGroup(
+            self, "tg_group",
+            port=80,
+            protocol="HTTP",
+            vpc_id=default_vpc.id,
+            target_type="instance"
+        )
+
+        lb_listener = LbListener(
+            self, "lb_listener",
+            load_balancer_arn=lb.arn,
+            port=80,
+            protocol="HTTP",
+            default_action=[LbListenerDefaultAction(type="forward", target_group_arn=target_group.arn)]
+        )
+
+        asg = AutoscalingGroup(
+            self, "asg",
+            min_size=1,
+            max_size=4,
+            desired_capacity=1,
+            launch_template={"id":launch_template.id},
+            vpc_zone_identifier= subnets,
+            target_group_arns=[target_group.arn]
+        )
         
-        lb = Lb()
-
-        target_group=LbTargetGroup()
-
-        lb_listener = LbListener()
-
-        asg = AutoscalingGroup()
-
 
 app = App()
 ServerStack(app, "cdktf_server")
