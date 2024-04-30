@@ -18,7 +18,13 @@ class ServerlessStack(TerraformStack):
 
         account_id = DataAwsCallerIdentity(self, "acount_id").account_id
         
-        bucket = S3Bucket()
+        bucket = S3Bucket(
+            self, "s3_bucket",
+            bucket_prefix = "my-cdtf-test-bucket",
+            acl="private",
+            force_destroy=True,
+            versioning={"enabled":True}
+        )
 
         S3BucketCorsConfiguration(
             self, "cors",
@@ -29,20 +35,41 @@ class ServerlessStack(TerraformStack):
                 allowed_origins = ["*"]
             )]
             )
-        dynamo_table = DynamodbTable()
+        dynamo_table = DynamodbTable(
+            self, "DynamodDB-table",
+            name= "posts",
+            hash_key="user",
+            range_key="id",
+            attribute=[
+                DynamodbTableAttribute(name="user",type="S" ),
+                DynamodbTableAttribute(name="id",type="S" ),
+            ],
+            billing_mode="PROVISIONED",
+            read_capacity=5,
+            write_capacity=5,
+        )
 
         # Packagage du code
-        code = TerraformAsset()
+        # code = TerraformAsset()
 
-        lambda_function = LambdaFunction()
+        # lambda_function = LambdaFunction()
 
-        permission = LambdaPermission()
+        # permission = LambdaPermission()
 
-        notification = S3BucketNotification()
+        # notification = S3BucketNotification()
 
-        TerraformOutput()
+        TerraformOutput(
+            self, "bucket",
+            value=bucket.id,
+        )
 
-        TerraformOutput()
+
+        TerraformOutput(
+            self, "dynamodb",
+            value=dynamo_table.id,
+        )
+        
+        # TerraformOutput()
 
 app = App()
 ServerlessStack(app, "cdktf_serverless")

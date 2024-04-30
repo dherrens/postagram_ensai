@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+import uuid
+import json
 
 from getSignedUrl import getSignedUrl
 
@@ -48,14 +50,65 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
     logger.info(f"body : {post.body}")
     logger.info(f"user : {authorization}")
 
+    dynamodb = boto3.resource('dynamodb')
+
+    table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
+
+    mon_post = {
+        'user': str(authorization),
+        'id': str(uuid.uuid4()),
+        'title': post.title,
+        'body': post.body,
+    }
+    table.put_item(
+        Item=mon_post
+    )
+
+    reponse = {
+        "statusCode": 200,
+        "headers": {
+            'Access-Control-Allow-Origin': '*'
+        },
+        "body": json.dumps(mon_post)
+    }
+
+
     # Doit retourner le résultat de la requête la table dynamodb
-    return []
+    return reponse
 
 @app.get("/posts")
 async def get_all_posts(user: Union[str, None] = None):
 
     # Doit retourner une liste de post
-    return []
+    dynamodb = boto3.resource('dynamodb')
+
+    table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
+
+    if (user is None):
+        posts = table.scan()
+    else:
+        posts = table.query(
+            Select='ALL_ATTRIBUTES',
+            ExpressionAttributeNames={"#user": "user"},
+            KeyConditionExpression="#user = :user",
+            ExpressionAttributeValues={
+                ":user": user,
+            },
+        )
+
+    # posts = table.query(KeyConditionExpression=Key("user").eq(username))
+
+    logger.info(json.dumps(posts, indent=2, ensure_ascii=False))
+
+    reponse = {
+        "statusCode": 200,
+        "headers": {
+            'Access-Control-Allow-Origin': '*'
+        },
+        "body": json.dumps(posts["Items"], indent=2, ensure_ascii=False)
+    }
+
+    return reponse
 
     
 @app.delete("/posts/{post_id}")
