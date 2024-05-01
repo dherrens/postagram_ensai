@@ -1,27 +1,27 @@
 #!/usr/bin/env python
 from constructs import Construct
-from cdktf import App, TerraformStack
+from cdktf import App, TerraformStack, TerraformOutput
 from cdktf_cdktf_provider_aws.provider import AwsProvider
 from cdktf_cdktf_provider_aws.default_vpc import DefaultVpc
 from cdktf_cdktf_provider_aws.default_subnet import DefaultSubnet
 from cdktf_cdktf_provider_aws.launch_template import LaunchTemplate
 from cdktf_cdktf_provider_aws.lb import Lb
 from cdktf_cdktf_provider_aws.lb_target_group import LbTargetGroup
-from cdktf_cdktf_provider_aws.lb_listener import LbListener
+from cdktf_cdktf_provider_aws.lb_listener import LbListener, LbListenerDefaultAction
 from cdktf_cdktf_provider_aws.autoscaling_group import AutoscalingGroup
 from cdktf_cdktf_provider_aws.security_group import SecurityGroup, SecurityGroupIngress, SecurityGroupEgress
 from cdktf_cdktf_provider_aws.data_aws_caller_identity import DataAwsCallerIdentity
 
 import base64
 
-bucket=""
+bucket="my-cdtf-test-bucket20240430180150975100000001"
 dynamo_table="posts"
-your_repo="git@github.com:dherrens/postagram_ensai.git"
+your_repo="https://github.com/dherrens/postagram_ensai.git"
 
 
 user_data = base64.b64encode(f"""
 #!/bin/bash
-echo "userdata-start"
+echo "userdata-start" > test.log
 echo 'export BUCKET={bucket}' >> /etc/environment
 echo 'export DYNAMO_TABLE={dynamo_table}' >> /etc/environment           
 apt update
@@ -31,6 +31,17 @@ cd postagram_ensai/webservice
 pip3 install -r requirements.txt
 python3 app.py
 echo "userdata-end""".encode("ascii")).decode("ascii")
+
+user_data = base64.b64encode(f"""
+#!/bin/bash
+apt update
+apt install -y python3-pip
+git clone https://github.com/HealerMikado/Ensai-CloudComputingLab1.git
+cd Ensai-CloudComputingLab1
+pip3 install -r requirements.txt
+python3 app.py
+""".encode("ascii")).decode("ascii")
+
 
 class ServerStack(TerraformStack):
     def __init__(self, scope: Construct, id: str):
@@ -129,6 +140,10 @@ class ServerStack(TerraformStack):
             target_group_arns=[target_group.arn]
         )
         
+        TerraformOutput(
+            self, "url",
+            value=lb.dns_name,
+        )
 
 app = App()
 ServerStack(app, "cdktf_server")
