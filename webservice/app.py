@@ -40,7 +40,7 @@ class Post(BaseModel):
     body: str
 
 
-dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
+dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
 @app.post("/posts")
@@ -50,7 +50,7 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
     logger.info(f"body : {post.body}")
     logger.info(f"user : {authorization}")
 
-    dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
+    dynamodb = boto3.resource('dynamodb')
 
     table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
@@ -80,7 +80,7 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
 async def get_all_posts(user: Union[str, None] = None):
 
     # Doit retourner une liste de post
-    dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
+    dynamodb = boto3.resource('dynamodb')
 
     table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
@@ -121,5 +121,5 @@ async def get_signed_url_put(filename: str,filetype: str, postId: str,authorizat
     return getSignedUrl(filename, filetype, postId, authorization)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="debug")
+    uvicorn.run(app, host="0.0.0.0", port=80, log_level="debug")
 

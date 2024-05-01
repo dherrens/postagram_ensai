@@ -32,15 +32,15 @@ pip3 install -r requirements.txt
 python3 app.py
 echo "userdata-end""".encode("ascii")).decode("ascii")
 
-user_data = base64.b64encode(f"""
-#!/bin/bash
-apt update
-apt install -y python3-pip
-git clone https://github.com/HealerMikado/Ensai-CloudComputingLab1.git
-cd Ensai-CloudComputingLab1
-pip3 install -r requirements.txt
-python3 app.py
-""".encode("ascii")).decode("ascii")
+# user_data = base64.b64encode(f"""
+# #!/bin/bash
+# apt update
+# apt install -y python3-pip
+# git clone https://github.com/HealerMikado/Ensai-CloudComputingLab1.git
+# cd Ensai-CloudComputingLab1
+# pip3 install -r requirements.txt
+# python3 app.py
+# """.encode("ascii")).decode("ascii")
 
 
 class ServerStack(TerraformStack):
@@ -104,7 +104,8 @@ class ServerStack(TerraformStack):
             vpc_security_group_ids=[security_group.id],
             key_name="vockey",
             user_data=user_data,
-            tags={"Name":"template TF"}
+            tags={"Name":"template TF"},
+            iam_instance_profile={"name": "LabInstanceProfile"}
             )
 
         lb = Lb(
