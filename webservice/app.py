@@ -96,8 +96,34 @@ async def get_all_posts(user: Union[str, None] = None):
     
 @app.delete("/posts/{post_id}")
 async def get_post_user_id(post_id: str):
+    dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
+    table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
+
+    logger.info(post_id)
+
+    posts = table.query(
+        Select='ALL_ATTRIBUTES',
+        IndexName="InvertedIndex",
+        KeyConditionExpression="id = :id",
+        ExpressionAttributeValues={
+            ":id": f"POST#{post_id}",
+        },
+    )
+
+    # Si tout va bien on aura récupéré exactement 1 post.
+    post = posts["Items"][0]
+    if (post.get("image") is not None):
+        s3 = boto3.resource('s3')
+        s3.Object(os.getenv("BUCKET"), post["image"]).delete()
+
     # Doit retourner le résultat de la requête la table dynamodb
-    return []
+    retour = table.delete_item(
+        Key={
+            "user": post["user"],
+            "id": post["id"]
+        },
+    )
+    return retour
 
 @app.get("/signedUrlPut")
 async def get_signed_url_put(filename: str,filetype: str, postId: str,authorization: str | None = Header(default=None)):

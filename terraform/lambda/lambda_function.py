@@ -10,7 +10,7 @@ s3 = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
 reckognition = boto3.client('rekognition')
 
-table = dynamodb.Table(os.getenv("table"))
+table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
 def lambda_handler(event, context):
     # Pour logger
@@ -19,8 +19,12 @@ def lambda_handler(event, context):
     bucket = event["Records"][0]["s3"]["bucket"]["name"]
     # Récupération du nom de l'objet
     key = unquote_plus(event["Records"][0]["s3"]["object"]["key"])
+    logger.info(key)
+
     # extration de l'utilisateur et de l'id de la tâche
     user, postId = key.split('/')[:2]
+    logger.info(user)
+
 
     # Appel au service, en passant l'image à analyser (bucket et key)
     # On souhaite au maximum 5 labels et uniquement les labels avec un taux de confiance > 0.75

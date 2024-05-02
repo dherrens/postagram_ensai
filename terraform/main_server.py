@@ -14,15 +14,17 @@ from cdktf_cdktf_provider_aws.data_aws_caller_identity import DataAwsCallerIdent
 
 import base64
 
-bucket="my-cdtf-test-bucket20240430180150975100000001"
+bucket="postagram-bucket20240502182320166500000001"
 dynamo_table="posts"
+region="us-east-1"
 your_repo="https://github.com/dherrens/postagram_ensai.git"
 
 
 user_data = base64.b64encode(f"""#!/bin/bash
-echo "userdata-start" > test.log
+echo "userdata-start"
 echo 'export BUCKET={bucket}' >> /etc/environment
-echo 'export DYNAMO_TABLE={dynamo_table}' >> /etc/environment           
+echo 'export DYNAMO_TABLE={dynamo_table}' >> /etc/environment
+echo 'export REGION={region}' >> /etc/environment           
 apt update
 apt install -y python3-pip
 git clone {your_repo}
@@ -106,7 +108,7 @@ class ServerStack(TerraformStack):
 
         target_group = LbTargetGroup(
             self, "tg_group",
-            port=80,
+            port=8080,
             protocol="HTTP",
             vpc_id=default_vpc.id,
             target_type="instance"

@@ -10,7 +10,7 @@ from cdktf_cdktf_provider_aws.data_aws_caller_identity import DataAwsCallerIdent
 from cdktf_cdktf_provider_aws.s3_bucket import S3Bucket
 from cdktf_cdktf_provider_aws.s3_bucket_cors_configuration import S3BucketCorsConfiguration, S3BucketCorsConfigurationCorsRule
 from cdktf_cdktf_provider_aws.s3_bucket_notification import S3BucketNotification, S3BucketNotificationLambdaFunction
-from cdktf_cdktf_provider_aws.dynamodb_table import DynamodbTable, DynamodbTableAttribute
+from cdktf_cdktf_provider_aws.dynamodb_table import DynamodbTable, DynamodbTableAttribute, DynamodbTableGlobalSecondaryIndex
 class ServerlessStack(TerraformStack):
     def __init__(self, scope: Construct, id: str):
         super().__init__(scope, id)
@@ -20,7 +20,7 @@ class ServerlessStack(TerraformStack):
         
         bucket = S3Bucket(
             self, "s3_bucket",
-            bucket_prefix = "my-cdtf-test-bucket",
+            bucket_prefix = "postagram-bucket",
             acl="private",
             force_destroy=True,
             versioning={"enabled":True}
@@ -47,6 +47,16 @@ class ServerlessStack(TerraformStack):
             billing_mode="PROVISIONED",
             read_capacity=5,
             write_capacity=5,
+            global_secondary_index=[
+                DynamodbTableGlobalSecondaryIndex(
+                    name="InvertedIndex",
+                    hash_key="id",
+                    range_key="user",
+                    projection_type="ALL",
+                    write_capacity=5,
+                    read_capacity=5
+                ),
+            ],
         )
 
         # Packagage du code
@@ -57,6 +67,46 @@ class ServerlessStack(TerraformStack):
         # permission = LambdaPermission()
 
         # notification = S3BucketNotification()
+
+        code = TerraformAsset(
+            self,
+            "code",
+            path="./lambda",
+            type=AssetType.ARCHIVE
+        )
+
+        lambda_function = LambdaFunction(
+            self,
+            "lambda",
+            function_name="lambda_function",
+            runtime="python3.8",
+            memory_size=128,
+            timeout=60,
+            role=f"arn:aws:iam::{account_id}:role/LabRole",
+            filename= code.path,
+            handler="lambda_function.lambda_handler",
+            environment={"variables": {"DYNAMO_TABLE": dynamo_table.id}}
+
+        )
+
+        permission = LambdaPermission(
+            self, "lambda_permission",
+            action="lambda:InvokeFunction",
+            statement_id="AllowExecutionFromS3Bucket",
+            function_name=lambda_function.arn,
+            principal="s3.amazonaws.com",
+            source_arn=bucket.arn,
+            source_account=account_id
+        )
+
+        notification = S3BucketNotification(
+            self, "notification",
+            lambda_function=[S3BucketNotificationLambdaFunction(
+                lambda_function_arn=lambda_function.arn,
+                events=["s3:ObjectCreated:*"]
+                )],
+            bucket=bucket.id
+        )
 
         TerraformOutput(
             self, "bucket",
