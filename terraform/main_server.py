@@ -19,8 +19,7 @@ dynamo_table="posts"
 your_repo="https://github.com/dherrens/postagram_ensai.git"
 
 
-user_data = base64.b64encode(f"""
-#!/bin/bash
+user_data = base64.b64encode(f"""#!/bin/bash
 echo "userdata-start" > test.log
 echo 'export BUCKET={bucket}' >> /etc/environment
 echo 'export DYNAMO_TABLE={dynamo_table}' >> /etc/environment           
@@ -32,15 +31,6 @@ pip3 install -r requirements.txt
 python3 app.py
 echo "userdata-end""".encode("ascii")).decode("ascii")
 
-# user_data = base64.b64encode(f"""
-# #!/bin/bash
-# apt update
-# apt install -y python3-pip
-# git clone https://github.com/HealerMikado/Ensai-CloudComputingLab1.git
-# cd Ensai-CloudComputingLab1
-# pip3 install -r requirements.txt
-# python3 app.py
-# """.encode("ascii")).decode("ascii")
 
 
 class ServerStack(TerraformStack):
@@ -98,15 +88,14 @@ class ServerStack(TerraformStack):
             )
         
         launch_template = LaunchTemplate(
-            self, "launch template",
-            image_id="ami-080e1f13689e07408",
-            instance_type="t2.micro", # le type de l'instance
+            self, "compute",
+            image_id="ami-0557a15b87f6559cf",
+            instance_type="t2.micro",
+            user_data=user_data,
             vpc_security_group_ids=[security_group.id],
             key_name="vockey",
-            user_data=user_data,
-            tags={"Name":"template TF"},
             iam_instance_profile={"name": "LabInstanceProfile"}
-            )
+        )
 
         lb = Lb(
             self, "lb",

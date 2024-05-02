@@ -12,7 +12,7 @@ import uvicorn
 import uuid
 import json
 
-from getSignedUrl import getSignedUrl
+from getSignedUrl import getSignedUrl, create_presigned_url
 
 load_dotenv()
 
@@ -55,23 +55,14 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
     table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
     mon_post = {
-        'user': str(authorization),
-        'id': str(uuid.uuid4()),
+        'user': f"USER#{authorization}",
+        'id': f"POST#{uuid.uuid4()}",
         'title': post.title,
         'body': post.body,
     }
-    table.put_item(
+    reponse = table.put_item(
         Item=mon_post
     )
-
-    reponse = {
-        "statusCode": 200,
-        "headers": {
-            'Access-Control-Allow-Origin': '*'
-        },
-        "body": json.dumps(mon_post)
-    }
-
 
     # Doit retourner le résultat de la requête la table dynamodb
     return reponse
@@ -92,23 +83,15 @@ async def get_all_posts(user: Union[str, None] = None):
             ExpressionAttributeNames={"#user": "user"},
             KeyConditionExpression="#user = :user",
             ExpressionAttributeValues={
-                ":user": user,
+                ":user": f"USER#{user}",
             },
         )
+    
+    for item in posts["Items"]:
+        if item.get('image') is not None:
+            item['image'] = create_presigned_url(os.getenv("BUCKET"), item['image'])
 
-    # posts = table.query(KeyConditionExpression=Key("user").eq(username))
-
-    logger.info(json.dumps(posts, indent=2, ensure_ascii=False))
-
-    reponse = {
-        "statusCode": 200,
-        "headers": {
-            'Access-Control-Allow-Origin': '*'
-        },
-        "body": json.dumps(posts["Items"], indent=2, ensure_ascii=False)
-    }
-
-    return reponse
+    return posts["Items"]
 
     
 @app.delete("/posts/{post_id}")
@@ -121,5 +104,5 @@ async def get_signed_url_put(filename: str,filetype: str, postId: str,authorizat
     return getSignedUrl(filename, filetype, postId, authorization)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=80, log_level="debug")
+    uvicorn.run(app, host="0.0.0.0", port=8080, log_level="debug")
 
