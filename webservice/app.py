@@ -50,7 +50,7 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
     logger.info(f"body : {post.body}")
     logger.info(f"user : {authorization}")
 
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
 
     table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
@@ -71,7 +71,7 @@ async def post_a_post(post: Post, authorization: str | None = Header(default=Non
 async def get_all_posts(user: Union[str, None] = None):
 
     # Doit retourner une liste de post
-    dynamodb = boto3.resource('dynamodb')
+    dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
 
     table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
