@@ -40,8 +40,8 @@ class Post(BaseModel):
     body: str
 
 
-dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
-table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
+# dynamodb = boto3.resource('dynamodb', region_name=os.getenv("REGION"))
+# table = dynamodb.Table(os.getenv("DYNAMO_TABLE"))
 
 @app.post("/posts")
 async def post_a_post(post: Post, authorization: str | None = Header(default=None)):
