@@ -14,7 +14,7 @@ from cdktf_cdktf_provider_aws.data_aws_caller_identity import DataAwsCallerIdent
 
 import base64
 
-bucket="postagram-bucket20240502182320166500000001"
+bucket="postagram-bucket20240517111124201400000001"
 dynamo_table="posts"
 region="us-east-1"
 your_repo="https://github.com/dherrens/postagram_ensai.git"
@@ -24,11 +24,13 @@ user_data = base64.b64encode(f"""#!/bin/bash
 echo "userdata-start"
 echo 'export BUCKET={bucket}' >> /etc/environment
 echo 'export DYNAMO_TABLE={dynamo_table}' >> /etc/environment
-echo 'export REGION={region}' >> /etc/environment           
+echo 'export REGION={region}' >> /etc/environment
+source /etc/environment
 apt update
 apt install -y python3-pip
 git clone {your_repo}
 cd postagram_ensai/webservice
+rm .env
 pip3 install -r requirements.txt
 python3 app.py
 echo "userdata-end""".encode("ascii")).decode("ascii")
@@ -134,7 +136,7 @@ class ServerStack(TerraformStack):
         
         TerraformOutput(
             self, "url",
-            value=lb.dns_name,
+            value="http://{}".format(lb.dns_name),
         )
 
 app = App()

@@ -59,15 +59,6 @@ class ServerlessStack(TerraformStack):
             ],
         )
 
-        # Packagage du code
-        # code = TerraformAsset()
-
-        # lambda_function = LambdaFunction()
-
-        # permission = LambdaPermission()
-
-        # notification = S3BucketNotification()
-
         code = TerraformAsset(
             self,
             "code",
